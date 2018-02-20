@@ -4,42 +4,43 @@ import "fmt"
 
 type SplashArgs struct {
 	// render.args
-	BaseUrl               string
-	Timeout               float32
-	ResourceTimeout       float32
-	Wait                  float32
-	Proxy                 string
-	JS                    string
-	JSSource              string
-	Filters               []string
-	AllowedDomains        []string
-	AllowedContentTypes   []string
-	ForbiddenContentTypes []string
-	Viewport              string
-	Images                int
-	Headers               []byte
-	Body                  string
-	SaveArgs              []byte
-	LoadArgs              []byte
-	args5Media            int
+	URL                   string   `json:"url"`
+	BaseURl               string   `json:"base_url"`
+	Timeout               float32  `json:"timeout"`
+	ResourceTimeout       float32  `json:"resource_timeout"`
+	Wait                  float32  `json:"wait"`
+	Proxy                 string   `json:"proxy"`
+	JS                    string   `json:"js"`
+	JSSource              string   `json:"js_source"`
+	Filters               []string `json:"filters"`
+	AllowedDomains        []string `json:"allowed_domains"`
+	AllowedContentTypes   []string `json:"allowed_content_types"`
+	ForbiddenContentTypes []string `json:"forbidden_content_types"`
+	Viewport              string   `json:"viewport"`
+	Images                int      `json:"images"`
+	Headers               []byte   `json:"headers"`
+	Body                  string   `json:"body"`
+	SaveArgs              []byte   `json:"save_args"`
+	LoadArgs              []byte   `json:"load_args"`
+	Html5Media            int      `json:"html5_media"`
 	// render.png: above + following
-	Width       int
-	Height      int
-	RenderAll   int
-	ScaleMethod string
+	Width       int    `json:"width"`
+	Height      int    `json:"height"`
+	RenderAll   int    `json:"render_all"`
+	ScaleMethod string `json:"scale_method"`
 	// render.jpeg: above + following
-	Quality int
+	Quality int `json:"quality"`
 	// render.har
-	ResponseBody int
+	ResponseBody int `json:"response_body"`
 	// render.json
-	Html    int
-	Png     int
-	Jpeg    int
-	Iframes int
-	Script  int
-	Console int
-	History int
-	Har     int
+	Html    int `json:"html"`
+	Png     int `json:"png"`
+	Jpeg    int `json:"jpeg"`
+	Iframes int `json:"iframes"`
+	Script  int `json:"script"`
+	Console int `json:"console"`
+	History int `json:"history"`
+	Har     int `json:"har"`
 }
 
 type viewport struct {
@@ -51,7 +52,7 @@ func (v *viewport) String() string {
 	return fmt.Sprintf("%dx%d", v.Width, v.Height)
 }
 
-func NewArgs(options ...func(args *SplashArgs)) *SplashArgs {
+func NewSsplashArgs(options ...func(args *SplashArgs)) *SplashArgs {
 	args := &SplashArgs{}
 	args.Init()
 
@@ -62,9 +63,15 @@ func NewArgs(options ...func(args *SplashArgs)) *SplashArgs {
 	return args
 }
 
-func BaseUrl(baseUrl string) func(*SplashArgs) {
+func URL(url string) func(*SplashArgs) {
 	return func(args *SplashArgs) {
-		args.BaseUrl = baseUrl
+		args.URL = url
+	}
+}
+
+func BaseURL(baseUrl string) func(*SplashArgs) {
+	return func(args *SplashArgs) {
+		args.BaseURl = baseUrl
 	}
 }
 
@@ -130,7 +137,8 @@ func ForbiddenContentTypes(forbiddenContentTypes []string) func(*SplashArgs) {
 
 func Viewport(width int, height int) func(*SplashArgs) {
 	return func(args *SplashArgs) {
-		args.Viewport = viewport{width, height}.String()
+		v := &viewport{1024, 768}
+		args.Viewport = v.String()
 	}
 }
 
@@ -140,7 +148,7 @@ func Images(images int) func(*SplashArgs) {
 	}
 }
 
-func Headers(headers []byte) func(*SplashArgs)  {
+func Headers(headers []byte) func(*SplashArgs) {
 	return func(args *SplashArgs) {
 		args.Headers = headers
 	}
@@ -164,9 +172,9 @@ func LoadArgs(loadArgs []byte) func(*SplashArgs) {
 	}
 }
 
-func args5Media(args5Media int) func(*SplashArgs) {
+func Html5Media(html5Media int) func(*SplashArgs) {
 	return func(args *SplashArgs) {
-		args.args5Media = args5Media
+		args.Html5Media = html5Media
 	}
 }
 
@@ -255,7 +263,7 @@ func Har(har int) func(*SplashArgs) {
 }
 
 func (args *SplashArgs) Init() {
-	args.BaseUrl = ""
+	args.BaseURl = ""
 	args.Timeout = 30
 	args.ResourceTimeout = 10
 	args.Wait = 0
@@ -266,13 +274,16 @@ func (args *SplashArgs) Init() {
 	args.AllowedDomains = []string{}
 	args.AllowedContentTypes = []string{}
 	args.ForbiddenContentTypes = []string{}
-	args.Viewport = viewport{1024, 768}.String()
+
+	v := &viewport{1024, 768}
+	args.Viewport = v.String()
+
 	args.Images = 1
 	args.Headers = []byte{}
 	args.Body = ""
 	args.SaveArgs = []byte{}
 	args.LoadArgs = []byte{}
-	args.args5Media = 0
+	args.Html5Media = 0
 	args.Width = -1
 	args.Height = -1
 	args.RenderAll = 0
