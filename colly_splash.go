@@ -2,10 +2,15 @@ package colly_splash
 
 import (
 	"github.com/gocolly/colly"
+	"net/http"
+	"bytes"
+	"fmt"
+	"strings"
+	"encoding/json"
 )
 
-type Collector struct {
-	colly.Collector
+type SplashCollector struct {
+	Collector               colly.Collector
 	Method                  string
 	EndPoint                string
 	SplashUrl               string
@@ -15,14 +20,11 @@ type Collector struct {
 	MagicResponse           bool
 	SessionID               string
 	HttpStatusFromErrorCode bool
-	Meta                    []byte
-	Args                    SplashArgs
+	Args                    *SplashArgs
 }
 
-var collector colly.Collector
-
-func NewCollySplash(options ...func(*Collector)) *Collector {
-	c := &Collector{}
+func NewCollySplash(options ...func(*SplashCollector)) *SplashCollector {
+	c := &SplashCollector{}
 	c.Init()
 
 	for _, f := range options {
@@ -32,73 +34,79 @@ func NewCollySplash(options ...func(*Collector)) *Collector {
 	return c
 }
 
-func Method(method string) func(*Collector) {
-	return func(c *Collector) {
+func Collector(collector colly.Collector) func(*SplashCollector) {
+	return func(splashCollector *SplashCollector) {
+		splashCollector.Collector = collector
+	}
+}
+
+func Method(method string) func(*SplashCollector) {
+	return func(c *SplashCollector) {
 		c.Method = method
 	}
 }
 
-func EndPoint(endPoint string) func(*Collector) {
-	return func(c *Collector) {
+func EndPoint(endPoint string) func(*SplashCollector) {
+	return func(c *SplashCollector) {
 		c.EndPoint = endPoint
 	}
 }
 
-func SplashUrl(url string) func(*Collector) {
-	return func(c *Collector) {
+func SplashUrl(splashUrl string) func(*SplashCollector) {
+	return func(c *SplashCollector) {
+		url := splashUrl
+
+		if strings.LastIndex(splashUrl, "/") == -1 {
+			url += "/"
+		}
+
 		c.SplashUrl = url
 	}
 }
 
-func SplashHeaders(headers []string) func(*Collector) {
-	return func(c *Collector) {
+func SplashHeaders(headers []string) func(*SplashCollector) {
+	return func(c *SplashCollector) {
 		c.SplashHeaders = headers
 	}
 }
 
-func DontProcessResponse(dontProcessResponse bool) func(*Collector) {
-	return func(c *Collector) {
+func DontProcessResponse(dontProcessResponse bool) func(*SplashCollector) {
+	return func(c *SplashCollector) {
 		c.DontProcessResponse = dontProcessResponse
 	}
 }
 
-func DontSendHeaders(dontSendHeaders bool) func(*Collector) {
-	return func(c *Collector) {
+func DontSendHeaders(dontSendHeaders bool) func(*SplashCollector) {
+	return func(c *SplashCollector) {
 		c.DontSendHeaders = dontSendHeaders
 	}
 }
 
-func MagicResponse(magicResponse bool) func(*Collector) {
-	return func(c *Collector) {
+func MagicResponse(magicResponse bool) func(*SplashCollector) {
+	return func(c *SplashCollector) {
 		c.MagicResponse = magicResponse
 	}
 }
 
-func SessionID(sessionID string) func(*Collector) {
-	return func(c *Collector) {
+func SessionID(sessionID string) func(*SplashCollector) {
+	return func(c *SplashCollector) {
 		c.SessionID = sessionID
 	}
 }
 
-func HttpStatusFromErrorCode(httpStatusFromErrorCode bool) func(*Collector) {
-	return func(c *Collector) {
+func HttpStatusFromErrorCode(httpStatusFromErrorCode bool) func(*SplashCollector) {
+	return func(c *SplashCollector) {
 		c.HttpStatusFromErrorCode = httpStatusFromErrorCode
 	}
 }
 
-func Meta(meta []byte) func(*Collector) {
-	return func(c *Collector) {
-		c.Meta = meta
+func Args(args *SplashArgs) func(*SplashCollector) {
+	return func(c *SplashCollector) {
+		c.Args = args
 	}
 }
 
-func Args(args *SplashArgs) func(*Collector) {
-	return func(c *Collector) {
-		c.Args = *args
-	}
-}
-
-func (c *Collector) Init() {
+func (c *SplashCollector) Init() {
 	c.Method = "GET"
 	c.EndPoint = "render.html"
 	c.SplashUrl = "http://127.0.0.1:8050/"
@@ -108,44 +116,62 @@ func (c *Collector) Init() {
 	c.MagicResponse = true
 	c.SessionID = "default"
 	c.HttpStatusFromErrorCode = true
-	c.Meta = []byte{}
+	c.Collector = colly.Collector{}
 }
 
-func (c *Collector) Visit(url string, collyCollector *colly.Collector) {
-	collector = *collyCollector
-	requestUrl := ""
+func (c *SplashCollector) Visit(url string) error {
+	requestUrl := fmt.Sprintf("%s%s", c.SplashUrl, c.EndPoint)
 
-	collyCollector.Visit(requestUrl)
+	header := http.Header{}
+	header.Set("Content-Type", "application/json")
+
+	fmt.Println(c.Args)
+
+	requestBody, err := json.Marshal(&c.Args)
+	fmt.Printf("Request Body: %q \n", requestBody)
+	fmt.Printf("Error: %s\n", err)
+
+	if err != nil {
+		return err
+	}
+
+	c.Collector.Request("POST", requestUrl, bytes.NewReader(requestBody), nil, header)
+
+	return nil
 }
 
-func (c *Collector) OnRequest(f colly.RequestCallback) {
-	collector.OnRequest(f)
+func (c *SplashCollector) OnRequest(f colly.RequestCallback) {
+	c.Collector.OnRequest(f)
 }
 
-func (c *Collector) OnResponse(f colly.ResponseCallback) {
-  collector.OnResponse(f)
+func (c *SplashCollector) OnResponse(f colly.ResponseCallback) {
+	c.Collector.OnResponse(f)
 }
 
-func (c *Collector) OnHTML(goquerySelector string, f colly.HTMLCallback) {
-  collector.OnHTML(goquerySelector, f)
+func (c *SplashCollector) OnHTML(goquerySelector string, f colly.HTMLCallback) {
+	c.Collector.OnHTML(goquerySelector, f)
 }
 
-func (c *Collector) OnXML(xpathQuery string, f colly.XMLCallback) {
-  collector.OnXML(xpathQuery, f)
+func (c *SplashCollector) OnXML(xpathQuery string, f colly.XMLCallback) {
+	c.Collector.OnXML(xpathQuery, f)
 }
 
-func (c *Collector) OnHTMLDetach(goquerySelector string) {
-  collector.OnHTMLDetach(goquerySelector)
+func (c *SplashCollector) OnHTMLDetach(goquerySelector string) {
+	c.Collector.OnHTMLDetach(goquerySelector)
 }
 
-func (c *Collector) OnXMLDetach(xpathQuery string) {
-  collector.OnXMLDetach(xpathQuery)
+func (c *SplashCollector) OnXMLDetach(xpathQuery string) {
+	c.Collector.OnXMLDetach(xpathQuery)
 }
 
-func (c *Collector) OnError(f colly.ErrorCallback) {
-  collector.OnError(f)
+func (c *SplashCollector) OnError(f colly.ErrorCallback) {
+	c.Collector.OnError(f)
 }
 
-func (c *Collector) OnScraped(f colly.ScrapedCallback) {
-  collector.OnScraped(f)
+func (c *SplashCollector) OnScraped(f colly.ScrapedCallback) {
+	c.Collector.OnScraped(f)
+}
+
+func (c *SplashCollector) Wait() {
+	c.Collector.Wait()
 }
