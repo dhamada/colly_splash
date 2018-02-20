@@ -17,6 +17,7 @@ type SplashArgs struct {
 	ForbiddenContentTypes []string
 	Viewport              string
 	Images                int
+	Headers               []byte
 	Body                  string
 	SaveArgs              []byte
 	LoadArgs              []byte
@@ -136,6 +137,12 @@ func Viewport(width int, height int) func(*SplashArgs) {
 func Images(images int) func(*SplashArgs) {
 	return func(args *SplashArgs) {
 		args.Images = images
+	}
+}
+
+func Headers(headers []byte) func(*SplashArgs)  {
+	return func(args *SplashArgs) {
+		args.Headers = headers
 	}
 }
 
@@ -261,6 +268,7 @@ func (args *SplashArgs) Init() {
 	args.ForbiddenContentTypes = []string{}
 	args.Viewport = viewport{1024, 768}.String()
 	args.Images = 1
+	args.Headers = []byte{}
 	args.Body = ""
 	args.SaveArgs = []byte{}
 	args.LoadArgs = []byte{}
