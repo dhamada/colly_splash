@@ -11,9 +11,8 @@ import (
 
 type SplashCollector struct {
 	Collector               colly.Collector
-	Method                  string
 	EndPoint                string
-	SplashUrl               string
+	SplashURL               string
 	SplashHeaders           []string
 	DontProcessResponse     bool
 	DontSendHeaders         bool
@@ -40,27 +39,21 @@ func Collector(collector colly.Collector) func(*SplashCollector) {
 	}
 }
 
-func Method(method string) func(*SplashCollector) {
-	return func(c *SplashCollector) {
-		c.Method = method
-	}
-}
-
 func EndPoint(endPoint string) func(*SplashCollector) {
 	return func(c *SplashCollector) {
 		c.EndPoint = endPoint
 	}
 }
 
-func SplashUrl(splashUrl string) func(*SplashCollector) {
+func SplashURL(splashURL string) func(*SplashCollector) {
 	return func(c *SplashCollector) {
-		url := splashUrl
+		url := splashURL
 
-		if strings.LastIndex(splashUrl, "/") == -1 {
+		if strings.LastIndex(splashURL, "/") == -1 {
 			url += "/"
 		}
 
-		c.SplashUrl = url
+		c.SplashURL = url
 	}
 }
 
@@ -107,9 +100,8 @@ func Args(args *SplashArgs) func(*SplashCollector) {
 }
 
 func (c *SplashCollector) Init() {
-	c.Method = "GET"
 	c.EndPoint = "render.html"
-	c.SplashUrl = "http://127.0.0.1:8050/"
+	c.SplashURL = "http://127.0.0.1:8050/"
 	c.SplashHeaders = []string{}
 	c.DontProcessResponse = false
 	c.DontSendHeaders = false
@@ -120,23 +112,65 @@ func (c *SplashCollector) Init() {
 }
 
 func (c *SplashCollector) Visit(url string) error {
-	requestUrl := fmt.Sprintf("%s%s", c.SplashUrl, c.EndPoint)
+	var requestURL string
+	if url == "" {
+		requestURL = fmt.Sprintf("%s%s", c.SplashURL, c.EndPoint)
+	} else {
+		requestURL = fmt.Sprintf("%s%s?url=%s", c.SplashURL, c.EndPoint, url)
+	}
 
 	header := http.Header{}
-	header.Set("Content-Type", "application/json")
+	header.Set("Content-Type", "application/json;")
 
-	fmt.Println(c.Args)
-
-	requestBody, err := json.Marshal(&c.Args)
-	fmt.Printf("Request Body: %q \n", requestBody)
-	fmt.Printf("Error: %s\n", err)
+	b, err := json.Marshal(&c.Args)
 
 	if err != nil {
 		return err
 	}
 
-	c.Collector.Request("POST", requestUrl, bytes.NewReader(requestBody), nil, header)
+	var f interface{}
+	if err = json.Unmarshal(b, &f); err != nil {
+		return err
+	}
 
+	// delete default values and empty values
+	m := f.(map[string]interface{})
+	for k, v := range m {
+		switch vv := v.(type) {
+
+		case string:
+			if v == "" {
+				delete(m, k)
+			}
+
+		case int:
+			if v == 0 {
+				delete(m, k)
+			}
+
+		case float32:
+			if v == float32(0) {
+				delete(m, k)
+			}
+
+		case float64:
+			if v == float64(0) {
+				delete(m, k)
+			}
+
+		case []interface{}:
+			if cap(vv) == 0 {
+				delete(m, k)
+			}
+
+		default:
+			continue
+		}
+	}
+
+	b, err = json.Marshal(f)
+	// send post method to splash
+	c.Collector.Request("POST", requestURL, bytes.NewReader(b), nil, header)
 	return nil
 }
 

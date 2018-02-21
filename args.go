@@ -52,7 +52,7 @@ func (v *viewport) String() string {
 	return fmt.Sprintf("%dx%d", v.Width, v.Height)
 }
 
-func NewSsplashArgs(options ...func(args *SplashArgs)) *SplashArgs {
+func NewSplashArgs(options ...func(args *SplashArgs)) *SplashArgs {
 	args := &SplashArgs{}
 	args.Init()
 
